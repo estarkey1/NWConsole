@@ -1,0 +1,12 @@
+USE master
+GO
+IF NOT EXISTS (
+   SELECT name
+   FROM sys.databases
+   WHERE name = N'NWConsole_22_EPS'
+)
+CREATE DATABASE [NWConsole_22_EPS]
+-- ***** UNCOMMENT THE FOLLOWING LINE AFTER CHANGING LINES 7 AND 9 *****
+GO
+
+
