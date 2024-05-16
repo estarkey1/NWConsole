@@ -28,7 +28,7 @@ try
         Console.WriteLine("8) Display Categories and active products");
         Console.WriteLine("9) Delete a specified existing record from the Products table");
         Console.WriteLine("10) Delete a specified existing record from the Categories table");
-        Console.WriteLine("11) Display all products from a specified Category under a given UnitPrice");
+        Console.WriteLine("11) Display all discontinued products.");
         Console.WriteLine("\"q\" to quit");
         choice = Console.ReadLine();
         Console.Clear();
@@ -186,6 +186,121 @@ try
                 }
             }
         }
+        else if (choice == "7")
+        {
+            Console.WriteLine("Enter the Product ID to edit:");
+            int id = int.Parse(Console.ReadLine());
+            var product = db.Products.FirstOrDefault(p => p.ProductId == id);
+
+            if (product != null)
+            {
+                Console.WriteLine("Enter new Product Name (leave blank to keep current):");
+                var newName = Console.ReadLine();
+                if (!string.IsNullOrWhiteSpace(newName)) product.ProductName = newName;
+
+                // Repeat the above for other fields as necessary...
+                // For brevity, only ProductName is being demonstrated here
+
+                ValidationContext context = new ValidationContext(product, null, null);
+                List<ValidationResult> results = new List<ValidationResult>();
+
+                var isValid = Validator.TryValidateObject(product, context, results, true);
+                if (isValid)
+                {
+                    logger.Info("Validation passed");
+                    db.SaveChanges();
+                    logger.Info("Product edited - {name}", product.ProductName);
+                }
+                if (!isValid)
+                {
+                    foreach (var result in results)
+                    {
+                        logger.Error($"{result.MemberNames.First()} : {result.ErrorMessage}");
+                    }
+                }
+            }
+            else
+            {
+                logger.Error("Product ID not found");
+            }
+        }
+        else if (choice == "8")
+        {
+            var query = db.Categories.Include(c => c.Products.Where(p => !p.Discontinued)).OrderBy(p => p.CategoryName);
+
+            foreach (var category in query)
+            {
+                Console.WriteLine($"{category.CategoryName} - {category.Description}");
+                foreach (var product in category.Products)
+                {
+                    Console.WriteLine($"\t{product.ProductName}");
+                }
+            }
+        }
+        else if (choice == "9")
+{
+    Console.WriteLine("Enter the Product ID to delete:");
+    if (int.TryParse(Console.ReadLine(), out int id))
+    {
+        var product = db.Products.Include(p => p.OrderDetails).FirstOrDefault(p => p.ProductId == id);
+
+        if (product != null)
+        {
+            // Remove related order details first
+            db.OrderDetails.RemoveRange(product.OrderDetails);
+
+            // Now remove the product
+            db.Products.Remove(product);
+
+            db.SaveChanges();
+            logger.Info("Product and related order details deleted - {name}", product.ProductName);
+        }
+        else
+        {
+            logger.Error("Product ID not found");
+        }
+    }
+    else
+    {
+        logger.Error("Invalid Product ID entered");
+    }
+}
+        else if (choice == "10")
+        {
+            Console.WriteLine("Enter the Category ID to delete:");
+            int id = int.Parse(Console.ReadLine());
+            var category = db.Categories.Include(c => c.Products).FirstOrDefault(c => c.CategoryId == id);
+
+            if (category != null)
+            {
+                db.Categories.Remove(category);
+                db.SaveChanges();
+                logger.Info("Category deleted - {name}", category.CategoryName);
+            }
+            else
+            {
+                logger.Error("Category ID not found");
+            }
+        }
+        else if (choice == "11")
+    {
+        var discontinuedProducts = db.Products.Where(p => p.Discontinued).OrderBy(p => p.ProductName);
+
+        if (discontinuedProducts.Any())
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("Discontinued Products:");
+            foreach (var product in discontinuedProducts)
+            {
+                Console.WriteLine(product.ProductName);
+            }
+            Console.ForegroundColor = ConsoleColor.White;
+        }
+        else
+        {
+            Console.WriteLine("There are no discontinued products.");
+        }
+    }
         Console.WriteLine();
 
     } while (choice.ToLower() != "q");
