@@ -28,7 +28,8 @@ try
         Console.WriteLine("8) Display Categories and active products");
         Console.WriteLine("9) Delete a specified existing record from the Products table");
         Console.WriteLine("10) Delete a specified existing record from the Categories table");
-        Console.WriteLine("11) Display all discontinued products.");
+        Console.WriteLine("11) (Extra) Display all discontinued products.");
+        Console.WriteLine("12) Add record to the Products table");
         Console.WriteLine("\"q\" to quit");
         choice = Console.ReadLine();
         Console.Clear();
@@ -120,17 +121,11 @@ try
         else if (choice == "5")
         {
             Console.WriteLine("1) All Products");
-            Console.WriteLine("2) Discontinued Products");
-            Console.WriteLine("3) Active Products");
+            Console.WriteLine("2) Active Products");
             var option = Console.ReadLine();
 
             var products = db.Products.AsQueryable();
-
             if (option == "2")
-            {
-                products = products.Where(p => p.Discontinued);
-            }
-            else if (option == "3")
             {
                 products = products.Where(p => !p.Discontinued);
             }
@@ -187,40 +182,45 @@ try
             }
         }
         else if (choice == "7")
+{
+    Console.WriteLine("Enter the Category ID to edit:");
+    int id = int.Parse(Console.ReadLine());
+    var category = db.Categories.FirstOrDefault(c => c.CategoryId == id);
+
+    if (category != null)
+    {
+        Console.WriteLine("Enter new Category Name (leave blank to keep current):");
+        var newName = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(newName)) category.CategoryName = newName;
+
+        Console.WriteLine("Enter new Category Description (leave blank to keep current):");
+        var newDescription = Console.ReadLine();
+        if (!string.IsNullOrWhiteSpace(newDescription)) category.Description = newDescription;
+
+        ValidationContext context = new ValidationContext(category, null, null);
+        List<ValidationResult> results = new List<ValidationResult>();
+
+        var isValid = Validator.TryValidateObject(category, context, results, true);
+        if (isValid)
         {
-            Console.WriteLine("Enter the Product ID to edit:");
-            int id = int.Parse(Console.ReadLine());
-            var product = db.Products.FirstOrDefault(p => p.ProductId == id);
-
-            if (product != null)
+            logger.Info("Validation passed");
+            db.SaveChanges();
+            logger.Info("Category edited - {name}", category.CategoryName);
+        }
+        if (!isValid)
+        {
+            foreach (var result in results)
             {
-                Console.WriteLine("Enter new Product Name (leave blank to keep current):");
-                var newName = Console.ReadLine();
-                if (!string.IsNullOrWhiteSpace(newName)) product.ProductName = newName;
-
-                ValidationContext context = new ValidationContext(product, null, null);
-                List<ValidationResult> results = new List<ValidationResult>();
-
-                var isValid = Validator.TryValidateObject(product, context, results, true);
-                if (isValid)
-                {
-                    logger.Info("Validation passed");
-                    db.SaveChanges();
-                    logger.Info("Product edited - {name}", product.ProductName);
-                }
-                if (!isValid)
-                {
-                    foreach (var result in results)
-                    {
-                        logger.Error($"{result.MemberNames.First()} : {result.ErrorMessage}");
-                    }
-                }
-            }
-            else
-            {
-                logger.Error("Product ID not found");
+                logger.Error($"{result.MemberNames.First()} : {result.ErrorMessage}");
             }
         }
+    }
+    else
+    {
+        logger.Error("Category ID not found");
+    }
+}
+
         else if (choice == "8")
         {
             var query = db.Categories.Include(c => c.Products.Where(p => !p.Discontinued)).OrderBy(p => p.CategoryName);
@@ -296,6 +296,49 @@ try
             Console.WriteLine("There are no discontinued products.");
         }
     }
+    else if (choice == "12")
+{
+    Product product = new Product();
+
+    Console.WriteLine("Enter Product Name:");
+    product.ProductName = Console.ReadLine();
+    Console.WriteLine("Enter Supplier ID:");
+    product.SupplierId = int.Parse(Console.ReadLine());
+    Console.WriteLine("Enter Category ID:");
+    product.CategoryId = int.Parse(Console.ReadLine());
+    Console.WriteLine("Enter Quantity Per Unit:");
+    product.QuantityPerUnit = Console.ReadLine();
+    Console.WriteLine("Enter Unit Price:");
+    product.UnitPrice = decimal.Parse(Console.ReadLine());
+    Console.WriteLine("Enter Units In Stock:");
+    product.UnitsInStock = short.Parse(Console.ReadLine());
+    Console.WriteLine("Enter Units On Order:");
+    product.UnitsOnOrder = short.Parse(Console.ReadLine());
+    Console.WriteLine("Enter Reorder Level:");
+    product.ReorderLevel = short.Parse(Console.ReadLine());
+    Console.WriteLine("Is Discontinued (true/false):");
+    product.Discontinued = bool.Parse(Console.ReadLine());
+
+    ValidationContext context = new ValidationContext(product, null, null);
+    List<ValidationResult> results = new List<ValidationResult>();
+
+    var isValid = Validator.TryValidateObject(product, context, results, true);
+    if (isValid)
+    {
+        logger.Info("Validation passed");
+        db.Products.Add(product);
+        db.SaveChanges();
+        logger.Info("Product added - {name}", product.ProductName);
+    }
+    else
+    {
+        foreach (var result in results)
+        {
+            logger.Error($"{result.MemberNames.First()} : {result.ErrorMessage}");
+        }
+    }
+}
+
         Console.WriteLine();
 
     } while (choice.ToLower() != "q");
