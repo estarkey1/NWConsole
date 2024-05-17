@@ -198,9 +198,6 @@ try
                 var newName = Console.ReadLine();
                 if (!string.IsNullOrWhiteSpace(newName)) product.ProductName = newName;
 
-                // Repeat the above for other fields as necessary...
-                // For brevity, only ProductName is being demonstrated here
-
                 ValidationContext context = new ValidationContext(product, null, null);
                 List<ValidationResult> results = new List<ValidationResult>();
 
@@ -246,10 +243,8 @@ try
 
         if (product != null)
         {
-            // Remove related order details first
             db.OrderDetails.RemoveRange(product.OrderDetails);
 
-            // Now remove the product
             db.Products.Remove(product);
 
             db.SaveChanges();
